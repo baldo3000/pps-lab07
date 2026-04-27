@@ -2,6 +2,8 @@ package ex2
 
 import ex2.RobotWithBattery.{DEFAULT_CONSUMPTION_RATE, DEFAULT_INITIAL_BATTERY}
 
+import scala.util.Random
+
 type Position = (Int, Int)
 enum Direction:
   case North, East, South, West
@@ -63,7 +65,15 @@ object RobotWithBattery:
   val DEFAULT_INITIAL_BATTERY = 100
   val DEFAULT_CONSUMPTION_RATE = 25
 
-//class RobotCanFail(val robot: Robot, val failureProbability: Double) extends Robot
+class RobotCanFail(val robot: Robot, val failureProbability: Double)
+    extends Robot:
+  require(failureProbability >= 0.0 && failureProbability <= 1.0)
+  private val random = Random()
+  export robot.{position, direction}
+  private def doActionMayFail(action: => Unit): Unit =
+    if random.nextDouble() >= failureProbability then action
+  override def turn(dir: Direction): Unit = doActionMayFail(robot.turn(dir))
+  override def act(): Unit = doActionMayFail(robot.act())
 
 @main def testRobot(): Unit =
   val robot = LoggingRobot(SimpleRobot((0, 0), Direction.North))
