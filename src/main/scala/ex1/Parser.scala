@@ -50,12 +50,26 @@ class NotTwoConsecutiveParser(chars: Set[Char])
     extends BasicParser(chars)
     with NotTwoConsecutive[Char]
 
+// Optional Implement mixin ShortenThenN which accepts a sequence of
+// chars of length at most n (part of the trait constructor).
+// NOTE: trait constructors are usually used with context bound traits
+trait ShorterThanN[T](n: Int) extends Parser[T]:
+  private var length = 0
+  abstract override def parse(t: T): Boolean =
+    length = length + 1
+    println(length)
+    super.parse(t)
+  abstract override def end: Boolean = length <= n && super.end
+
+class ShorterThanNParser(chars: Set[Char], n: Int)
+    extends BasicParser(chars)
+    with ShorterThanN[Char](n)
+
 @main def checkParsers(): Unit =
   def parser = new BasicParser(Set('a', 'b', 'c'))
   println(parser.parseAll("aabc".toList)) // true
   println(parser.parseAll("aabcdc".toList)) // false
   println(parser.parseAll("".toList)) // true
-
   // Note NonEmpty being "stacked" on to a concrete class
   // Bottom-up decorations: NonEmptyParser -> NonEmpty -> BasicParser -> Parser
   def parserNE = new NonEmptyParser(Set('0', '1'))

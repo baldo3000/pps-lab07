@@ -2,9 +2,9 @@ package ex1
 
 import ex1.Parsers.charParser
 import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers.*
+import org.scalatest.matchers.should.Matchers
 
-class ParserScalaTest extends AnyFlatSpec:
+class ParserScalaTest extends AnyFlatSpec with Matchers:
   def parser = new BasicParser(Set('a', 'b', 'c'))
   // Note NonEmpty being "stacked" on to a concrete class
   // Bottom-up decorations: NonEmptyParser -> NonEmpty -> BasicParser -> Parser
@@ -15,6 +15,7 @@ class ParserScalaTest extends AnyFlatSpec:
     with NotTwoConsecutive[Char]
     with NonEmpty[Char]
   def sparser: Parser[Char] = "abc".charParser
+  def parserSTN = new ShorterThanNParser(Set('a', 'b', 'c'), 3)
 
   "BasicParser" should "work" in:
     parser.parseAll("aabc".toList) should be(true)
@@ -40,3 +41,8 @@ class ParserScalaTest extends AnyFlatSpec:
     sparser.parseAll("aabc".toList) should be(true)
     sparser.parseAll("aabcdc".toList) should be(false)
     sparser.parseAll("".toList) should be(true)
+
+  "ParserShorterThanN" should "rejects string longer than n" in:
+    parserSTN.parseAll("abc".toList) should be(true)
+    parserSTN.parseAll("abcc".toList) should be(false)
+    parserSTN.parseAll("".toList) should be(true)
