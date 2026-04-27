@@ -75,6 +75,14 @@ class RobotCanFail(val robot: Robot, val failureProbability: Double)
   override def turn(dir: Direction): Unit = doActionMayFail(robot.turn(dir))
   override def act(): Unit = doActionMayFail(robot.act())
 
+class RobotRepeated(val robot: Robot, val repetitions: Int) extends Robot:
+  require(repetitions >= 0)
+  export robot.{position, direction}
+  private def doMultipleTimes(action: => Unit): Unit =
+    1 to repetitions foreach (_ => action)
+  override def turn(dir: Direction): Unit = doMultipleTimes(robot.turn(dir))
+  override def act(): Unit = doMultipleTimes(robot.act())
+
 @main def testRobot(): Unit =
   val robot = LoggingRobot(SimpleRobot((0, 0), Direction.North))
   robot.act() // robot at (0, 1) facing North
