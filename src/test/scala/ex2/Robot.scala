@@ -28,7 +28,6 @@ class RobotSpec extends AnyFlatSpec with Matchers:
     robot.turn(Direction.East)
     robot.act()
     robot.position should be((1, 1))
-
     robot.turn(Direction.South)
     robot.act()
     robot.position should be((1, 0))
