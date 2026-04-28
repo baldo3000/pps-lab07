@@ -34,7 +34,11 @@ object ConnectThree extends App:
       .orElse(Some(0))
       .filter(_ <= bound)
 
-  def placeAnyDisk(board: Board, player: Player): Seq[Board] = ???
+  def placeAnyDisk(board: Board, player: Player): Seq[Board] =
+    for
+      x <- 0 to bound
+      y <- firstAvailableRow(board, x)
+    yield board :+ Disk(x, y, player)
 
   def computeAnyGame(player: Player, moves: Int): LazyList[Game] = ???
 
@@ -78,7 +82,7 @@ object ConnectThree extends App:
   // .... .... .... ....
   // .... .... .... ....
   // ...X ..X. .X.. X...
-  printBoards(placeAnyDisk(List(Disk(0, 0, O)), X))
+  printBoards(placeAnyDisk(List(Disk(3, 0, O)), X))
   // .... .... .... ....
   // .... .... .... ....
   // ...X .... .... ....
