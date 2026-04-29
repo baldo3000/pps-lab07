@@ -1,5 +1,4 @@
 package ex4
-
 // Optional!
 object ConnectThree extends App:
   val bound = 3
@@ -40,16 +39,50 @@ object ConnectThree extends App:
       y <- firstAvailableRow(board, x)
     yield board :+ Disk(x, y, player)
 
-  def computeAnyGame(player: Player, moves: Int): LazyList[Game] = moves match
-    case 0 => LazyList(Seq())
-    case _ =>
-      for
-        game <- computeAnyGame(player.other, moves - 1)
-        lastBoard = game.headOption.getOrElse(Seq())
-        newBoard <- placeAnyDisk(lastBoard, player)
-      yield newBoard +: game
+  def computeAnyGame(initialPlayer: Player, moves: Int): LazyList[Game] =
+    val lastPlayer = if moves % 2 == 0 then initialPlayer.other else initialPlayer
+
+    def _computeAnyGame(lastPlayer: Player, moves: Int): LazyList[Game] = moves match
+      case 0 => LazyList(Seq(Seq()))
+      case _ =>
+        for
+          game <- _computeAnyGame(lastPlayer.other, moves - 1)
+          lastBoard = game.head
+          newGame: Game <-
+            if hasSomeoneWon(lastBoard) then LazyList(game)
+            else
+              for newBoard <- placeAnyDisk(lastBoard, lastPlayer)
+                yield newBoard +: game
+        yield newGame
+
+    _computeAnyGame(lastPlayer, moves)
+
+  def hasSomeoneWon(board: Board): Boolean =
+    Seq(X, O).exists(hasPlayerWon(board, _))
+
+  def hasPlayerWon(board: Board, player: Player): Boolean =
+    import math.abs
+    val playerDisks = board.filter(_.player == player)
+
+    def hasThreeAligned(disks: Seq[Disk]): Boolean =
+      disks
+        .combinations(3)
+        .exists:
+          _.sortBy(d => (d.x, d.y)) match
+            case a :: b :: c :: _ =>
+              val dx1 = b.x - a.x
+              val dy1 = b.y - a.y
+              val dx2 = c.x - b.x
+              val dy2 = c.y - b.y
+              dx1 == dx2 && dy1 == dy2 && (abs(dx1) == 1 || abs(dy1) == 1)
+
+    hasThreeAligned(playerDisks)
 
   def printBoards(game: Seq[Board]): Unit =
+    val winner = Seq(X, O)
+      .find(hasPlayerWon(game.headOption.getOrElse(Seq()), _))
+      .getOrElse("None")
+    if winner == "None" then return // DEBUG
     for
       y <- bound to 0 by -1
       board <- game.reverse
@@ -59,6 +92,8 @@ object ConnectThree extends App:
       if x == bound then
         print(" ")
         if board == game.head then println()
+
+    println(s"Game won by: $winner")
 
   // Exercise 1: implement find such that...
   println("EX 1: ")
@@ -97,10 +132,12 @@ object ConnectThree extends App:
 
   // Exercise 4 (ADVANCED!): implement computeAnyGame such that...
   println("EX 4: ")
-  computeAnyGame(X, 4).foreach { g =>
+  val start = System.currentTimeMillis()
+  computeAnyGame(O, 8).foreach { g =>
     printBoards(g)
-    println()
+    // println()
   }
+  print(s"Taken ${(System.currentTimeMillis() - start) / 1000.0} seconds")
   //  .... .... .... .... ...O
   //  .... .... .... ...X ...X
   //  .... .... ...O ...O ...O
