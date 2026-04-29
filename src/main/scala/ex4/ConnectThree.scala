@@ -1,7 +1,5 @@
 package ex4
 
-import scala.util.Random
-
 // Optional!
 object ConnectThree extends App:
   val bound = 3
@@ -167,15 +165,23 @@ object ConnectThree extends App:
     def computeNewDisk(board: Board, player: Player): Disk
 
   object AI:
-    def randomAI: AI = RandomAIImpl()
+    def randomAI: AI = RandomAI()
+    def smartAI: AI = SmartAI()
 
-    private class RandomAIImpl extends AI:
-      private val random = Random()
+    private class RandomAI extends AI:
+      override def computeNewDisk(board: Board, player: Player): Disk =
+        computeAnyDisk(board, player).random
 
+    private class SmartAI extends AI:
       override def computeNewDisk(board: Board, player: Player): Disk =
         val disks = computeAnyDisk(board, player)
-        val index = random.nextInt(disks.size)
-        disks(index)
+        val minY = disks.minBy(_.y).y
+        disks.filter(_.y == minY).random
+
+    extension [T](i: Iterable[T])
+      private def random: T =
+        val n = util.Random.nextInt(i.size)
+        i.iterator.drop(n).next()
 
   def simulateGame(initialPlayer: Player, moves: Int)(using ai: AI): Game =
     def step(currentPlayer: Player, remainingMoves: Int): Game =
@@ -191,6 +197,8 @@ object ConnectThree extends App:
 
     step(lastPlayer(initialPlayer, moves), moves)
 
-  given AI = AI.randomAI
-  val game = simulateGame(X, 6)
-  printBoards(game.boards)
+  val game1 = simulateGame(X, 6)(using AI.randomAI)
+  printBoards(game1.boards)
+
+  val game2 = simulateGame(X, 6)(using AI.smartAI)
+  printBoards(game2.boards)
