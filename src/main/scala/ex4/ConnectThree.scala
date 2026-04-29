@@ -1,4 +1,7 @@
 package ex4
+
+import scala.util.Random
+
 // Optional!
 object ConnectThree extends App:
   val bound = 3
@@ -19,6 +22,7 @@ object ConnectThree extends App:
   //   0 1 2 3   x
   type Board = Seq[Disk]
   type Game = (boards: Seq[Board], won: Boolean)
+  def emptyGame: Game = (Seq(Seq()), false)
 
   import Player.*
 
@@ -33,18 +37,20 @@ object ConnectThree extends App:
       .orElse(Some(0))
       .filter(_ <= bound)
 
-  def placeAnyDisk(board: Board, player: Player): Seq[Board] =
+  def computeAnyDisk(board: Board, player: Player): Seq[Disk] =
     for
       x <- 0 to bound
       y <- firstAvailableRow(board, x)
-    yield board :+ Disk(x, y, player)
+    yield Disk(x, y, player)
+
+  def placeAnyDisk(board: Board, player: Player): Seq[Board] =
+    for disk <- computeAnyDisk(board, player)
+    yield board :+ disk
+
+  def lastPlayer(initialPlayer: Player, moves: Int): Player =
+    if moves % 2 == 0 then initialPlayer.other else initialPlayer
 
   def computeAnyGame(initialPlayer: Player, moves: Int): LazyList[Game] =
-    val lastPlayer =
-      if moves % 2 == 0 then initialPlayer.other else initialPlayer
-
-    def emptyGame: Game = (Seq(Seq()), false)
-
     def evolveGame(game: Game, currentPlayer: Player): Seq[Game] =
       val lastBoard = game.boards.head
       if (game.won || hasSomeoneWon(lastBoard))
@@ -62,7 +68,7 @@ object ConnectThree extends App:
             newGame <- evolveGame(game, currentPlayer)
           yield newGame
 
-    step(lastPlayer, moves)
+    step(lastPlayer(initialPlayer, moves), moves)
 
   def hasSomeoneWon(board: Board): Boolean =
     Seq(X, O).exists(hasPlayerWon(board, _))
@@ -139,11 +145,13 @@ object ConnectThree extends App:
   // Exercise 4 (ADVANCED!): implement computeAnyGame such that...
   println("EX 4: ")
   val start = System.currentTimeMillis()
-  computeAnyGame(O, 8).foreach { g =>
-    printBoards(g.boards)
-    println()
-  }
-  print(s"Taken ${(System.currentTimeMillis() - start) / 1000.0} seconds")
+//  Uncomment to show results
+//  computeAnyGame(O, 8).foreach { g =>
+//    printBoards(g.boards)
+//    println()
+//  }
+  computeAnyGame(O, 8).size
+  println(s"Taken ${(System.currentTimeMillis() - start) / 1000.0} seconds")
   //  .... .... .... .... ...O
   //  .... .... .... ...X ...X
   //  .... .... ...O ...O ...O
@@ -154,4 +162,35 @@ object ConnectThree extends App:
   // .... .... O... O... O...
   // .... X... X... X... X...
 
-  // Exercise 4 (VERY ADVANCED!) -- modify the above one to stop each game when someone won!!
+  // Exercise 6 (ADVANCED!) -- create an AI that plays...
+  trait AI:
+    def computeNewDisk(board: Board, player: Player): Disk
+
+  object AI:
+    def randomAI: AI = RandomAIImpl()
+
+    private class RandomAIImpl extends AI:
+      private val random = Random()
+
+      override def computeNewDisk(board: Board, player: Player): Disk =
+        val disks = computeAnyDisk(board, player)
+        val index = random.nextInt(disks.size)
+        disks(index)
+
+  def simulateGame(initialPlayer: Player, moves: Int)(using ai: AI): Game =
+    def step(currentPlayer: Player, remainingMoves: Int): Game =
+      remainingMoves match
+        case 0 => emptyGame
+        case _ =>
+          val previousBoards =
+            step(currentPlayer.other, remainingMoves - 1).boards
+          val lastBoard = previousBoards.head
+          val newDisk = ai.computeNewDisk(lastBoard, currentPlayer)
+          val newBoard = lastBoard :+ newDisk
+          (newBoard +: previousBoards, false)
+
+    step(lastPlayer(initialPlayer, moves), moves)
+
+  given AI = AI.randomAI
+  val game = simulateGame(X, 6)
+  printBoards(game.boards)
