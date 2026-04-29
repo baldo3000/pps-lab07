@@ -40,7 +40,14 @@ object ConnectThree extends App:
       y <- firstAvailableRow(board, x)
     yield board :+ Disk(x, y, player)
 
-  def computeAnyGame(player: Player, moves: Int): LazyList[Game] = ???
+  def computeAnyGame(player: Player, moves: Int): LazyList[Game] = moves match
+    case 0 => LazyList(Seq())
+    case _ =>
+      for
+        game <- computeAnyGame(player.other, moves - 1)
+        lastBoard = game.headOption.getOrElse(Seq())
+        newBoard <- placeAnyDisk(lastBoard, player)
+      yield newBoard +: game
 
   def printBoards(game: Seq[Board]): Unit =
     for
@@ -88,17 +95,16 @@ object ConnectThree extends App:
   // ...X .... .... ....
   // ...O ..XO .X.O X..O
 
-  // Exercise 3 (ADVANCED!): implement computeAnyGame such that...
-  computeAnyGame(O, 4).foreach { g =>
+  // Exercise 4 (ADVANCED!): implement computeAnyGame such that...
+  println("EX 4: ")
+  computeAnyGame(X, 4).foreach { g =>
     printBoards(g)
     println()
   }
-
   //  .... .... .... .... ...O
   //  .... .... .... ...X ...X
   //  .... .... ...O ...O ...O
   //  .... ...X ...X ...X ...X
-  //
   //
   // .... .... .... .... O...
   // .... .... .... X... X...
