@@ -18,7 +18,7 @@ object ConnectThree extends App:
   // 0
   //   0 1 2 3   x
   type Board = Seq[Disk]
-  type Game = Seq[Board]
+  type Game = (boards: Seq[Board], won: Boolean)
 
   import Player.*
 
@@ -40,22 +40,29 @@ object ConnectThree extends App:
     yield board :+ Disk(x, y, player)
 
   def computeAnyGame(initialPlayer: Player, moves: Int): LazyList[Game] =
-    val lastPlayer = if moves % 2 == 0 then initialPlayer.other else initialPlayer
+    val lastPlayer =
+      if moves % 2 == 0 then initialPlayer.other else initialPlayer
 
-    def _computeAnyGame(lastPlayer: Player, moves: Int): LazyList[Game] = moves match
-      case 0 => LazyList(Seq(Seq()))
-      case _ =>
-        for
-          game <- _computeAnyGame(lastPlayer.other, moves - 1)
-          lastBoard = game.head
-          newGame: Game <-
-            if hasSomeoneWon(lastBoard) then LazyList(game)
-            else
-              for newBoard <- placeAnyDisk(lastBoard, lastPlayer)
-                yield newBoard +: game
-        yield newGame
+    def emptyGame: Game = (Seq(Seq()), false)
 
-    _computeAnyGame(lastPlayer, moves)
+    def evolveGame(game: Game, currentPlayer: Player): Seq[Game] =
+      val lastBoard = game.boards.head
+      if (game.won || hasSomeoneWon(lastBoard))
+        Seq((game.boards, true))
+      else
+        for newBoard <- placeAnyDisk(lastBoard, currentPlayer)
+        yield (newBoard +: game.boards, false)
+
+    def step(currentPlayer: Player, remainingMoves: Int): LazyList[Game] =
+      remainingMoves match
+        case 0 => LazyList(emptyGame)
+        case _ =>
+          for
+            game <- step(currentPlayer.other, remainingMoves - 1)
+            newGame <- evolveGame(game, currentPlayer)
+          yield newGame
+
+    step(lastPlayer, moves)
 
   def hasSomeoneWon(board: Board): Boolean =
     Seq(X, O).exists(hasPlayerWon(board, _))
@@ -82,7 +89,8 @@ object ConnectThree extends App:
     val winner = Seq(X, O)
       .find(hasPlayerWon(game.headOption.getOrElse(Seq()), _))
       .getOrElse("None")
-    if winner == "None" then return // DEBUG
+    // if winner == "None" then return // DEBUG
+    println(s"Game won by: $winner")
     for
       y <- bound to 0 by -1
       board <- game.reverse
@@ -92,8 +100,6 @@ object ConnectThree extends App:
       if x == bound then
         print(" ")
         if board == game.head then println()
-
-    println(s"Game won by: $winner")
 
   // Exercise 1: implement find such that...
   println("EX 1: ")
@@ -134,8 +140,8 @@ object ConnectThree extends App:
   println("EX 4: ")
   val start = System.currentTimeMillis()
   computeAnyGame(O, 8).foreach { g =>
-    printBoards(g)
-    // println()
+    printBoards(g.boards)
+    println()
   }
   print(s"Taken ${(System.currentTimeMillis() - start) / 1000.0} seconds")
   //  .... .... .... .... ...O
